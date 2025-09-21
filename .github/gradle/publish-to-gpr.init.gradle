@@ -2,7 +2,7 @@
 // Injects a Maven repository into projects that apply 'maven-publish'.
 
 import org.gradle.api.publish.PublishingExtension
-import org.gradle.api.credentials.PasswordCredentials
+import org.gradle.api.artifacts.repositories.PasswordCredentials
 
 static def parseOwnerRepoFromGitConfig(File rootDir) {
     def gitConfig = new File(rootDir, '.git/config')
