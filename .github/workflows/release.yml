@@ -46,12 +46,12 @@ jobs:
       - name: Publish BOM to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew -I .github/gradle/publish-to-gpr.init.gradle.kts -I .github/gradle/set-version.init.gradle.kts -PreleaseVersion=${{ steps.ver.outputs.version }} clean :bom:publish --stacktrace --no-daemon
+        run: ./gradlew -I .github/gradle/publish-to-gpr.init.gradle -I .github/gradle/set-version.init.gradle.kts -PreleaseVersion=${{ steps.ver.outputs.version }} clean :bom:publish --stacktrace --no-daemon
 
       - name: Publish Library Plugin to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew -I .github/gradle/publish-to-gpr.init.gradle.kts -I .github/gradle/set-version.init.gradle.kts -PreleaseVersion=${{ steps.ver.outputs.version }} -p library clean publish --stacktrace --no-daemon
+        run: ./gradlew -I .github/gradle/publish-to-gpr.init.gradle -I .github/gradle/set-version.init.gradle.kts -PreleaseVersion=${{ steps.ver.outputs.version }} -p library clean publish --stacktrace --no-daemon
 
       - name: Bump version to next -SNAPSHOT and push
         env:
@@ -71,11 +71,11 @@ jobs:
           git checkout "$BRANCH"
           git pull --ff-only origin "$BRANCH"
 
-          # Update versions in source
-          sed -i -E "s/(^\s*version\s*=\s*")([^"]+)(")/\1$NEXT\3/" build.gradle.kts || true
+          # Update versions in source (GNU sed, use POSIX classes)
+          sed -i -E "s/(^[[:space:]]*version[[:space:]]*=[[:space:]]*")([^"]+)(")/\1$NEXT\3/" build.gradle.kts || true
           sed -i -E "s/^(version=).*/\1$NEXT/" gradle.properties || true
           if [ -f library/build.gradle.kts ]; then
-            sed -i -E "s/(^\s*version\s*=\s*")([^"]+)(")/\1$NEXT\3/" library/build.gradle.kts || true
+            sed -i -E "s/(^[[:space:]]*version[[:space:]]*=[[:space:]]*")([^"]+)(")/\1$NEXT\3/" library/build.gradle.kts || true
           fi
 
           # Commit and push if there are changes

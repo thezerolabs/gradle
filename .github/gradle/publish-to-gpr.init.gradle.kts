@@ -39,8 +39,8 @@ fun parseOwnerRepoFromGitConfig(rootDir: java.io.File): Pair<String, String>? {
     return null
 }
 
-gradle.projectsEvaluated { g ->
-    val root = g.rootProject
+gradle.beforeProject { project ->
+    val root = project.rootProject
     val ownerFromEnv = System.getenv("GITHUB_OWNER")
     val ownerRepoFromEnv = System.getenv("GITHUB_REPOSITORY")
     val ownerFromProp = root.findProperty("gpr.owner")?.toString()
@@ -65,16 +65,14 @@ gradle.projectsEvaluated { g ->
     val token = System.getenv("GPR_TOKEN") ?: System.getenv("GITHUB_TOKEN")
 
     if (!repoUrl.isNullOrBlank() && !user.isNullOrBlank() && !token.isNullOrBlank()) {
-        root.allprojects {
-            plugins.withId("maven-publish") {
-                val pub = extensions.getByType(PublishingExtension::class.java)
-                pub.repositories {
-                    maven {
-                        setUrl(uri(repoUrl))
-                        credentials(PasswordCredentials::class) {
-                            this.username = user
-                            this.password = token
-                        }
+        project.pluginManager.withPlugin("maven-publish") {
+            val pub = project.extensions.getByType(PublishingExtension::class.java)
+            pub.repositories {
+                maven {
+                    setUrl(project.uri(repoUrl))
+                    credentials(PasswordCredentials::class) {
+                        this.username = user
+                        this.password = token
                     }
                 }
             }
