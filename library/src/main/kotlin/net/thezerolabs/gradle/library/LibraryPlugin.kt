@@ -3,14 +3,12 @@ package net.thezerolabs.gradle.library
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.publish.PublishingExtension
-import org.gradle.api.Action
-import org.gradle.api.artifacts.repositories.PasswordCredentials
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.credentials
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import javax.inject.Inject
 
@@ -180,10 +178,10 @@ class LibraryPlugin : Plugin<Project> {
                         repositories {
                             maven {
                                 this.url = project.uri(url)
-                                credentials(PasswordCredentials::class.java, Action<PasswordCredentials> { c ->
-                                    c.username = user
-                                    c.password = token
-                                })
+                                credentials {
+                                    username = user
+                                    password = token
+                                }
                             }
                         }
                     }
