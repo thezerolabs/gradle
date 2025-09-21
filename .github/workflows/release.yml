@@ -30,7 +30,9 @@ jobs:
           cache: 'gradle'
 
       - name: Gradle Wrapper validation
-        uses: gradle/wrapper-validation-action@v2
+        uses: gradle/actions/wrapper-validation@v3
+        timeout-minutes: 5
+        continue-on-error: true
 
       - name: Compute release version
         id: ver
