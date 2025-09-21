@@ -39,9 +39,8 @@ fun parseOwnerRepoFromGitConfig(rootDir: java.io.File): Pair<String, String>? {
     return null
 }
 
-gradle.settingsEvaluated {
-    val root = gradle.rootProject
-
+gradle.projectsEvaluated { g ->
+    val root = g.rootProject
     val ownerFromEnv = System.getenv("GITHUB_OWNER")
     val ownerRepoFromEnv = System.getenv("GITHUB_REPOSITORY")
     val ownerFromProp = root.findProperty("gpr.owner")?.toString()
@@ -71,7 +70,6 @@ gradle.settingsEvaluated {
                 val pub = extensions.getByType(PublishingExtension::class.java)
                 pub.repositories {
                     maven {
-                        setName("GitHubPackages")
                         setUrl(uri(repoUrl))
                         credentials(PasswordCredentials::class) {
                             this.username = user
