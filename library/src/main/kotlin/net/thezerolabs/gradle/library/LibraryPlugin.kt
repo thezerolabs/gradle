@@ -8,10 +8,8 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.publish.PublishingExtension
-import org.gradle.api.Action
-import org.gradle.api.artifacts.dsl.RepositoryHandler
-import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.repositories.PasswordCredentials
+import org.gradle.kotlin.dsl.configure
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import javax.inject.Inject
 
@@ -177,16 +175,17 @@ class LibraryPlugin : Plugin<Project> {
                     ?: env("GITHUB_TOKEN")
 
                 if (!url.isNullOrBlank() && !user.isNullOrBlank() && !token.isNullOrBlank()) {
-                    val pub = project.extensions.getByType(PublishingExtension::class.java)
-                    pub.repositories(Action<RepositoryHandler> { repos ->
-                        repos.maven(Action<MavenArtifactRepository> { m ->
-                            m.setUrl(project.uri(url))
-                            m.credentials(Action<PasswordCredentials> { c ->
-                                c.username = user
-                                c.password = token
-                            })
-                        })
-                    })
+                    project.extensions.configure<PublishingExtension> {
+                        repositories {
+                            maven {
+                                this.url = project.uri(url)
+                                credentials(PasswordCredentials::class) {
+                                    this.username = user
+                                    this.password = token
+                                }
+                            }
+                        }
+                    }
                 } else {
                     project.logger.info("[library] Skipping GitHub Packages publishing repository: missing url/user/token. url=$url user=${user?.let { "***" }} token=${token?.let { "***" }}")
                 }
