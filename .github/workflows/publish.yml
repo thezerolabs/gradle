@@ -31,13 +31,28 @@ jobs:
         timeout-minutes: 5
         continue-on-error: true
 
+      - name: Compute CI version
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="$(sed -n 's/^version=\(.*\)/\1/p' gradle.properties | tr -d '\r' || true)"
+          if [ -z "$BASE" ]; then BASE="0.0.0-SNAPSHOT"; fi
+          if [[ "$BASE" =~ ^(.+)-SNAPSHOT ]]; then
+            CORE="${BASH_REMATCH[1]}"
+            VER="${CORE}-SNAPSHOT.${GITHUB_RUN_NUMBER}"
+          else
+            VER="${BASE}-ci.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
       - name: Publish BOM to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew clean :bom:publish --stacktrace --no-daemon
+        run: ./gradlew -PreleaseVersion=${{ steps.ver.outputs.version }} clean :bom:publish --stacktrace --no-daemon
 
       - name: Publish Library Plugin to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         working-directory: ${{ github.workspace }}/library
-        run: ${{ github.workspace }}/gradlew clean publish --stacktrace --no-daemon
+        run: ${{ github.workspace }}/gradlew -PreleaseVersion=${{ steps.ver.outputs.version }} clean publish --stacktrace --no-daemon
