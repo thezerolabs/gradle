@@ -1,0 +1,39 @@
+# Version catalog for BOM imports (as of 2025-09-21)
+# Aliases map to typesafe accessors like: libs.boms.spring.boot
+
+[versions]
+springBoot = "3.5.6"
+springCloud = "2025.0.0"
+springSecurity = "6.5.5"
+springData = "2025.0.4"
+reactor = "2024.0.10"
+jackson = "2.20.0"
+netty = "4.2.6.Final"
+aws = "2.34.0"
+googleCloud = "26.68.0"
+micrometer = "1.15.4"
+azure = "1.2.38"
+kotlin = "2.2.20"
+
+[libraries]
+# Spring ecosystem
+boms-spring-boot = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "springBoot" }
+boms-spring-cloud = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "springCloud" }
+boms-spring-security = { module = "org.springframework.security:spring-security-bom", version.ref = "springSecurity" }
+boms-spring-data = { module = "org.springframework.data:spring-data-bom", version.ref = "springData" }
+boms-reactor = { module = "io.projectreactor:reactor-bom", version.ref = "reactor" }
+
+# Core libs
+boms-jackson = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
+boms-netty = { module = "io.netty:netty-bom", version.ref = "netty" }
+
+# Cloud SDKs
+boms-aws = { module = "software.amazon.awssdk:bom", version.ref = "aws" }
+boms-google-cloud = { module = "com.google.cloud:libraries-bom", version.ref = "googleCloud" }
+boms-azure = { module = "com.azure:azure-sdk-bom", version.ref = "azure" }
+
+# Observability
+boms-micrometer = { module = "io.micrometer:micrometer-bom", version.ref = "micrometer" }
+
+# Language
+boms-kotlin = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }

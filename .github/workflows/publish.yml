@@ -1,0 +1,40 @@
+name: Publish to GitHub Packages
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 24
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '24'
+          cache: 'gradle'
+
+      - name: Gradle Wrapper validation
+        uses: gradle/wrapper-validation-action@v2
+
+      - name: Publish BOM to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew -I .github/gradle/publish-to-gpr.init.gradle.kts clean :bom:publish --stacktrace --no-daemon
+
+      - name: Publish Library Plugin to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew -I .github/gradle/publish-to-gpr.init.gradle.kts -p library clean publish --stacktrace --no-daemon
