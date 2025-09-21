@@ -69,13 +69,13 @@ gradle.settingsEvaluated {
         root.allprojects {
             plugins.withId("maven-publish") {
                 val pub = extensions.getByType(PublishingExtension::class.java)
-                pub.repositories { repos ->
-                    repos.maven {
-                        name = "GitHubPackages"
-                        url = uri(repoUrl)
+                pub.repositories {
+                    maven {
+                        setName("GitHubPackages")
+                        setUrl(uri(repoUrl))
                         credentials(PasswordCredentials::class) {
-                            username = user
-                            password = token
+                            this.username = user
+                            this.password = token
                         }
                     }
                 }
