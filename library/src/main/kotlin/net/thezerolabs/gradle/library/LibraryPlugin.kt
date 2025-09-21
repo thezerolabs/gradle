@@ -8,6 +8,7 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.Action
 import org.gradle.api.artifacts.repositories.PasswordCredentials
 import org.gradle.kotlin.dsl.configure
 import org.gradle.jvm.toolchain.JavaLanguageVersion
@@ -179,10 +180,10 @@ class LibraryPlugin : Plugin<Project> {
                         repositories {
                             maven {
                                 this.url = project.uri(url)
-                                credentials(org.gradle.api.artifacts.repositories.PasswordCredentials::class.java) { c: org.gradle.api.artifacts.repositories.PasswordCredentials ->
+                                credentials(PasswordCredentials::class.java, Action<PasswordCredentials> { c ->
                                     c.username = user
                                     c.password = token
-                                }
+                                })
                             }
                         }
                     }
