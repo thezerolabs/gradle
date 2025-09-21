@@ -3,9 +3,13 @@ plugins {
     `maven-publish`
 }
 
+val releaseVersion: String? = (findProperty("releaseVersion") as String?)
+    ?: System.getenv("RELEASE_VERSION")
+    ?: System.getenv("VERSION")
+
 allprojects {
     group = "net.thezerolabs.gradle"
-    version = "1.0.0-SNAPSHOT"
+    version = releaseVersion ?: (findProperty("version") as String? ?: "1.0.0-SNAPSHOT")
     
     repositories {
         mavenCentral()

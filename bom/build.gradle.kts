@@ -58,4 +58,25 @@ publishing {
             }
         }
     }
+    // Configure GitHub Packages repository (no init script)
+    val gprOwnerRepo = System.getenv("GITHUB_REPOSITORY")
+    val gprOwner = gprOwnerRepo?.substringBefore('/') ?: (findProperty("gpr.owner") as String?)
+    val gprRepo = gprOwnerRepo?.substringAfter('/') ?: (findProperty("gpr.repo") as String?)
+    val gprUrl = System.getenv("GPR_URL") ?: if (!gprOwner.isNullOrBlank() && !gprRepo.isNullOrBlank()) {
+        "https://maven.pkg.github.com/$gprOwner/$gprRepo"
+    } else null
+    val gprUser = System.getenv("GPR_USER") ?: System.getenv("GITHUB_ACTOR")
+    val gprToken = System.getenv("GPR_TOKEN") ?: System.getenv("GITHUB_TOKEN")
+
+    if (!gprUrl.isNullOrBlank() && !gprUser.isNullOrBlank() && !gprToken.isNullOrBlank()) {
+        repositories {
+            maven {
+                url = uri(gprUrl)
+                credentials {
+                    username = gprUser
+                    password = gprToken
+                }
+            }
+        }
+    }
 }

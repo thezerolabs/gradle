@@ -46,12 +46,13 @@ jobs:
       - name: Publish BOM to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew -I "${{ github.workspace }}/.github/gradle/publish-to-gpr.init.gradle" -I "${{ github.workspace }}/.github/gradle/set-version.init.gradle.kts" -PreleaseVersion=${{ steps.ver.outputs.version }} clean :bom:publish --stacktrace --no-daemon
+        run: ./gradlew -PreleaseVersion=${{ steps.ver.outputs.version }} clean :bom:publish --stacktrace --no-daemon
 
       - name: Publish Library Plugin to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew -I "${{ github.workspace }}/.github/gradle/publish-to-gpr.init.gradle" -I "${{ github.workspace }}/.github/gradle/set-version.init.gradle.kts" -PreleaseVersion=${{ steps.ver.outputs.version }} -p library clean publish --stacktrace --no-daemon
+        working-directory: ${{ github.workspace }}/library
+        run: ${{ github.workspace }}/gradlew -PreleaseVersion=${{ steps.ver.outputs.version }} clean publish --stacktrace --no-daemon
 
       - name: Bump version to next -SNAPSHOT and push
         env:
