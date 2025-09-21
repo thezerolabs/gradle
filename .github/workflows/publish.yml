@@ -44,5 +44,4 @@ jobs:
           GPR_USER: ${{ secrets.GPR_USER || github.actor }}
           GPR_TOKEN: ${{ secrets.GPR_TOKEN || secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        working-directory: ${{ github.workspace }}/library
-        run: ${{ github.workspace }}/gradlew clean publish --stacktrace --no-daemon
+        run: ./gradlew clean :library:publish --stacktrace --no-daemon

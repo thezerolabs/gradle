@@ -55,8 +55,7 @@ jobs:
           GPR_USER: ${{ secrets.GPR_USER || github.actor }}
           GPR_TOKEN: ${{ secrets.GPR_TOKEN || secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        working-directory: ${{ github.workspace }}/library
-        run: ${{ github.workspace }}/gradlew -PreleaseVersion=${{ steps.ver.outputs.version }} clean publish --stacktrace --no-daemon
+        run: ./gradlew -PreleaseVersion=${{ steps.ver.outputs.version }} clean :library:publish --stacktrace --no-daemon
 
       - name: Bump version to next -SNAPSHOT and push
         env:
@@ -79,9 +78,7 @@ jobs:
           # Update versions in source (GNU sed, use POSIX classes)
           sed -i -E "s/(^[[:space:]]*version[[:space:]]*=[[:space:]]*")([^"]+)(")/\1$NEXT\3/" build.gradle.kts || true
           sed -i -E "s/^(version=).*/\1$NEXT/" gradle.properties || true
-          if [ -f library/build.gradle.kts ]; then
-            sed -i -E "s/(^[[:space:]]*version[[:space:]]*=[[:space:]]*")([^"]+)(")/\1$NEXT\3/" library/build.gradle.kts || true
-          fi
+          # library is a subproject; version is read from root gradle.properties
 
           # Commit and push if there are changes
           if [ -n "$(git status --porcelain)" ]; then
