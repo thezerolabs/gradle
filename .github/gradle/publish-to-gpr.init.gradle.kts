@@ -3,6 +3,7 @@
 // Resolves owner/repo from env (GITHUB_REPOSITORY) or from .git/config remote "origin"
 
 import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.credentials.PasswordCredentials
 
 fun parseOwnerRepoFromGitConfig(rootDir: java.io.File): Pair<String, String>? {
     val gitConfig = java.io.File(rootDir, ".git/config")
@@ -57,23 +58,24 @@ gradle.settingsEvaluated {
         }
     }
 
-    val url = System.getenv("GPR_URL") ?: if (!owner.isNullOrBlank() && !repo.isNullOrBlank()) {
+    val repoUrl = System.getenv("GPR_URL") ?: if (!owner.isNullOrBlank() && !repo.isNullOrBlank()) {
         "https://maven.pkg.github.com/$owner/$repo"
     } else null
 
     val user = System.getenv("GPR_USER") ?: System.getenv("GITHUB_ACTOR")
     val token = System.getenv("GPR_TOKEN") ?: System.getenv("GITHUB_TOKEN")
 
-    if (!url.isNullOrBlank() && !user.isNullOrBlank() && !token.isNullOrBlank()) {
+    if (!repoUrl.isNullOrBlank() && !user.isNullOrBlank() && !token.isNullOrBlank()) {
         root.allprojects {
-            extensions.configure(PublishingExtension::class.java) { pub ->
+            plugins.withId("maven-publish") {
+                val pub = extensions.getByType(PublishingExtension::class.java)
                 pub.repositories { repos ->
-                    repos.maven { m ->
-                        m.name = "GitHubPackages"
-                        m.setUrl(url)
-                        m.credentials { c ->
-                            c.username = user
-                            c.password = token
+                    repos.maven {
+                        name = "GitHubPackages"
+                        url = uri(repoUrl)
+                        credentials(PasswordCredentials::class) {
+                            username = user
+                            password = token
                         }
                     }
                 }
