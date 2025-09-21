@@ -45,11 +45,15 @@ jobs:
 
       - name: Publish BOM to GitHub Packages
         env:
+          GPR_USER: ${{ secrets.GPR_USER || github.actor }}
+          GPR_TOKEN: ${{ secrets.GPR_TOKEN || secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew -PreleaseVersion=${{ steps.ver.outputs.version }} clean :bom:publish --stacktrace --no-daemon
 
       - name: Publish Library Plugin to GitHub Packages
         env:
+          GPR_USER: ${{ secrets.GPR_USER || github.actor }}
+          GPR_TOKEN: ${{ secrets.GPR_TOKEN || secrets.GITHUB_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         working-directory: ${{ github.workspace }}/library
         run: ${{ github.workspace }}/gradlew -PreleaseVersion=${{ steps.ver.outputs.version }} clean publish --stacktrace --no-daemon
