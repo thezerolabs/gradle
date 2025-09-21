@@ -179,9 +179,9 @@ class LibraryPlugin : Plugin<Project> {
                         repositories {
                             maven {
                                 this.url = project.uri(url)
-                                credentials(PasswordCredentials::class) {
-                                    this.username = user
-                                    this.password = token
+                                credentials(org.gradle.api.artifacts.repositories.PasswordCredentials::class.java) { c: org.gradle.api.artifacts.repositories.PasswordCredentials ->
+                                    c.username = user
+                                    c.password = token
                                 }
                             }
                         }
