@@ -66,8 +66,8 @@ gradle.settingsEvaluated {
 
     if (!url.isNullOrBlank() && !user.isNullOrBlank() && !token.isNullOrBlank()) {
         root.allprojects {
-            extensions.configure(PublishingExtension::class.java) {
-                it.repositories { repos ->
+            extensions.configure(PublishingExtension::class.java) { pub ->
+                pub.repositories { repos ->
                     repos.maven { m ->
                         m.name = "GitHubPackages"
                         m.setUrl(url)
