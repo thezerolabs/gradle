@@ -10,6 +10,9 @@ import org.gradle.api.publish.PublishingExtension
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.credentials
 import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.credentials.PasswordCredentials
+import org.gradle.kotlin.dsl.maven
 import javax.inject.Inject
 
 open class ZeroExtension @Inject constructor(objects: ObjectFactory) {
@@ -67,6 +70,41 @@ class LibraryPlugin : Plugin<Project> {
                 }
             }.onFailure {
                 project.logger.info("[library] Unable to set Kotlin JVM toolchain to 24: ${it.message}")
+            }
+        }
+ 
+        // Add TheZeroLabs Maven repository as a default repository for dependency resolution
+        run {
+            fun env(name: String): String? = project.providers.environmentVariable(name).orNull
+            fun prop(name: String): String? = project.providers.gradleProperty(name).orNull ?: project.findProperty(name)?.toString()
+
+            val repoUrl = zero.githubUrl.orNull ?: "https://maven.pkg.github.com/thezerolabs/gradle"
+            val user = zero.username.orNull
+                ?: prop("gpr.user")
+                ?: env("GPR_USER")
+                ?: env("GITHUB_ACTOR")
+            val token = zero.token.orNull
+                ?: prop("gpr.token")
+                ?: env("GPR_TOKEN")
+                ?: env("GITHUB_TOKEN")
+
+            val alreadyAdded = project.repositories.any {
+                it is org.gradle.api.artifacts.repositories.MavenArtifactRepository &&
+                    it.url.toString() == repoUrl
+            }
+            if (!alreadyAdded) {
+                project.repositories.maven {
+                    name = "TheZeroLabs"
+                    url = project.uri(repoUrl)
+                    if (!user.isNullOrBlank() && !token.isNullOrBlank()) {
+                        credentials(PasswordCredentials::class) {
+                            username = user
+                            password = token
+                        }
+                    } else {
+                        project.logger.info("[library] Adding TheZeroLabs Maven repository without credentials (url=$repoUrl)")
+                    }
+                }
             }
         }
 

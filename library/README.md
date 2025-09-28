@@ -9,6 +9,7 @@ The `library` module provides a Gradle plugin (`net.thezerolabs.gradle.library`)
 ## What the plugin does
 
 - Sets Java toolchain to Java 24 when not explicitly configured.
+- Adds TheZeroLabs GitHub Packages Maven repository for dependency resolution by default.
 - Optionally adds TheZeroLabs BOM (`:bom` project if present, or published BOM by GAV) to common configurations.
 - Optionally configures a Maven repository pointing to GitHub Packages for publishing (no init scripts required).
 
@@ -84,9 +85,9 @@ zero {
     enableGithubPublishing.set(true)
     githubOwner.set("thezerolabs") // Optional; auto-derived from env or .git/config
     githubRepo.set("gradle")        // Optional; auto-derived from env or .git/config
-    githubUrl.set("https://maven.pkg.github.com/thezerolabs/gradle") // Optional explicit URL
+    githubUrl.set("https://maven.pkg.github.com/thezerolabs/gradle") // Optional explicit URL for dependency resolution and publishing
 
-    // Credentials (if not set, falls back to env GITHUB_ACTOR / GITHUB_TOKEN)
+    // Credentials (used for dependency resolution and publishing; if not set, falls back to env GITHUB_ACTOR / GITHUB_TOKEN)
     username.set("${System.getenv("GPR_USER")}")
     token.set("${System.getenv("GPR_TOKEN")}")
 }
@@ -104,8 +105,9 @@ zero {
     enableGithubPublishing = true
     githubOwner = 'thezerolabs'
     githubRepo = 'gradle'
-    githubUrl = 'https://maven.pkg.github.com/thezerolabs/gradle'
+    githubUrl = 'https://maven.pkg.github.com/thezerolabs/gradle' // Used for dependency resolution and publishing
 
+    // Credentials (used for dependency resolution and publishing)
     username = System.getenv('GPR_USER')
     token = System.getenv('GPR_TOKEN')
 }
