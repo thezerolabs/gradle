@@ -11,6 +11,13 @@ repositories {
     gradlePluginPortal()
 }
 
+dependencies {
+    // Add plugin dependencies to allow compiling against their APIs
+    compileOnly(libs.gradlePlugins.kotlin)
+    compileOnly(libs.gradlePlugins.springboot)
+    compileOnly(libs.gradlePlugins.jib)
+}
+
 gradlePlugin {
     plugins {
         create("library") {
@@ -25,35 +32,27 @@ gradlePlugin {
             description = "Extends the library plugin with Spring Boot and container image publishing defaults."
             implementationClass = "net.thezerolabs.gradle.library.ServicePlugin"
         }
+        create("convention") {
+            id = "net.thezerolabs.gradle.convention"
+            displayName = "TheZeroLabs Convention Plugin"
+            description = "Internal convention plugin for Java, toolchains, and default repositories."
+            implementationClass = "net.thezerolabs.gradle.library.ConventionPlugin"
+        }
+        create("github") {
+            id = "net.thezerolabs.gradle.github"
+            displayName = "TheZeroLabs GitHub Integration Plugin"
+            description = "Internal convention plugin for GitHub Packages publishing and repository setup."
+            implementationClass = "net.thezerolabs.gradle.library.GithubPlugin"
+        }
+        create("bom") {
+            id = "net.thezerolabs.gradle.bom"
+            displayName = "TheZeroLabs BOM Plugin"
+            description = "Internal convention plugin for managing the TheZeroLabs BOM."
+            implementationClass = "net.thezerolabs.gradle.library.BomPlugin"
+        }
     }
 }
 
 publishing {
-    publications {
-        // java-gradle-plugin will create publications for plugin + marker automatically
-    }
-}
-
-// Configure GitHub Packages repository (no init script)
-val gprOwnerRepo = System.getenv("GITHUB_REPOSITORY")
-val gprOwner = gprOwnerRepo?.substringBefore('/') ?: (findProperty("gpr.owner") as String?)
-val gprRepo = gprOwnerRepo?.substringAfter('/') ?: (findProperty("gpr.repo") as String?)
-val gprUrl = System.getenv("GPR_URL") ?: if (!gprOwner.isNullOrBlank() && !gprRepo.isNullOrBlank()) {
-    "https://maven.pkg.github.com/$gprOwner/$gprRepo"
-} else null
-val gprUser = System.getenv("GPR_USER") ?: System.getenv("GITHUB_ACTOR")
-val gprToken = System.getenv("GPR_TOKEN") ?: System.getenv("GITHUB_TOKEN")
-
-if (!gprUrl.isNullOrBlank() && !gprUser.isNullOrBlank() && !gprToken.isNullOrBlank()) {
-    publishing {
-        repositories {
-            maven {
-                url = uri(gprUrl)
-                credentials {
-                    username = gprUser
-                    password = gprToken
-                }
-            }
-        }
-    }
+    // Publications are configured by the applied plugins (java-gradle-plugin and GithubPlugin)
 }

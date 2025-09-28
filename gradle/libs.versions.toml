@@ -14,6 +14,7 @@ googleCloud = "26.68.0"
 micrometer = "1.15.4"
 azure = "1.2.38"
 kotlin = "2.2.20"
+jib = "3.4.3"
 
 [libraries]
 # Spring ecosystem
@@ -37,3 +38,13 @@ boms-micrometer = { module = "io.micrometer:micrometer-bom", version.ref = "micr
 
 # Language
 boms-kotlin = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
+
+# Gradle Plugin APIs for compileOnly
+gradlePlugins-kotlin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+gradlePlugins-springboot = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "springBoot" }
+gradlePlugins-jib = { module = "com.google.cloud.tools:jib-gradle-plugin", version.ref = "jib" }
+
+[plugins]
+kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+springboot = { id = "org.springframework.boot", version.ref = "springBoot" }
+jib = { id = "com.google.cloud.tools.jib", version.ref = "jib" }
