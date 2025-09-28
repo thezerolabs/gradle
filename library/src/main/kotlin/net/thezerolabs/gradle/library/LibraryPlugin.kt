@@ -7,6 +7,7 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.publish.PublishingExtension
+import net.thezerolabs.gradle.library.internal.GitUtils
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.credentials
@@ -37,6 +38,8 @@ open class ContainerExtension @Inject constructor(objects: ObjectFactory) {
 }
 
 open class ZeroExtension @Inject constructor(objects: ObjectFactory) {
+    /** Java toolchain version to enforce. */
+    val javaToolchainVersion: Property<Int> = objects.property(Int::class.java).convention(24)
     /** Group of the published BOM to use when the :bom project is not present. */
     val bomGroup: Property<String> = objects.property(String::class.java).convention("net.thezerolabs.gradle")
     /** Artifact of the published BOM to use when the :bom project is not present. */
@@ -91,13 +94,10 @@ class LibraryPlugin : Plugin<Project> {
         project.pluginManager.apply("java-library")
         project.pluginManager.apply("maven-publish")
 
-        // Enforce Java 24+ via toolchains when Java plugin is present
+        // Enforce Java toolchain version when Java plugin is present
         project.pluginManager.withPlugin("java") {
             val javaExt = project.extensions.getByType(JavaPluginExtension::class.java)
-            val current: JavaLanguageVersion? = javaExt.toolchain.languageVersion.orNull
-            if (current == null || current.asInt() < 24) {
-                javaExt.toolchain.languageVersion.set(JavaLanguageVersion.of(24))
-            }
+            javaExt.toolchain.languageVersion.set(zero.javaToolchainVersion.map(JavaLanguageVersion::of))
             // Also publish sources and javadoc jars by default
             runCatching {
                 javaExt.withSourcesJar()
@@ -107,17 +107,11 @@ class LibraryPlugin : Plugin<Project> {
             }
         }
 
-        // If Kotlin JVM plugin is used, set its toolchain to 24 as well (reflection to avoid hard dependency)
+        // If Kotlin JVM plugin is used, set its toolchain to match the Java toolchain
         project.pluginManager.withPlugin("org.jetbrains.kotlin.jvm") {
-            val kotlinExt = project.extensions.findByName("kotlin")
-            runCatching {
-                val m = kotlinExt?.javaClass?.methods?.firstOrNull { it.name == "jvmToolchain" && it.parameterTypes.size == 1 }
-                if (m != null) {
-                    // Prefer the overload taking an Int (Gradle Kotlin DSL: jvmToolchain(24))
-                    m.invoke(kotlinExt, 24)
-                }
-            }.onFailure {
-                project.logger.info("[library] Unable to set Kotlin JVM toolchain to 24: ${it.message}")
+            val kotlinExt = project.extensions.getByType(org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension::class.java)
+            kotlinExt.jvmToolchain {
+                languageVersion.set(zero.javaToolchainVersion.map(JavaLanguageVersion::of))
             }
 
             // Also enable KAPT if available so 'kapt' configurations exist for annotation processing
@@ -186,44 +180,34 @@ class LibraryPlugin : Plugin<Project> {
             }
         }
 
-        // Apply to all projects in the build for consistency
-        project.rootProject.allprojects { ensureDefaultRepositories(this) }
+        // Apply to the current project
+        ensureDefaultRepositories(project)
 
         // Add BOM as a default dependency when common JVM configurations are present
-        fun addBom() {
-            val bomNotation: Any = project.rootProject.findProject(":bom")?.let {
-                val local = project.dependencies.project(mapOf("path" to ":bom"))
-                if (zero.enforcedPlatform.get()) project.dependencies.enforcedPlatform(local) else project.dependencies.platform(local)
-            } ?: run {
-                val bomVersion = zero.bomVersion.orNull
-                    ?: project.providers.gradleProperty("thezerolabs.bomVersion").orNull
-                    ?: project.findProperty("thezerolabs.bomVersion")?.toString()
-                    ?: project.providers.environmentVariable("THEZEROLABS_BOM_VERSION").orNull
+        val bomNotation: Any? = project.rootProject.findProject(":bom")?.let {
+            val local = project.dependencies.project(mapOf("path" to ":bom"))
+            if (zero.enforcedPlatform.get()) project.dependencies.enforcedPlatform(local) else project.dependencies.platform(local)
+        } ?: run {
+            val bomVersion = zero.bomVersion.orNull
+                ?: project.providers.gradleProperty("thezerolabs.bomVersion").orNull
+                ?: project.findProperty("thezerolabs.bomVersion")?.toString()
+                ?: project.providers.environmentVariable("THEZEROLABS_BOM_VERSION").orNull
 
-                if (bomVersion.isNullOrBlank()) {
-                    project.logger.lifecycle("[library] No :bom project found and no BOM version provided (thezerolabs.bomVersion). Skipping BOM injection.")
-                    return
-                }
+            if (bomVersion.isNullOrBlank()) {
+                project.logger.lifecycle("[library] No :bom project found and no BOM version provided (thezerolabs.bomVersion). Skipping BOM injection.")
+                null
+            } else {
                 val gav = "${zero.bomGroup.get()}:${zero.bomArtifact.get()}:$bomVersion"
                 if (zero.enforcedPlatform.get()) project.dependencies.enforcedPlatform(gav) else project.dependencies.platform(gav)
             }
-
-            val configurations = zero.addToConfigurations.get()
-            configurations.forEach { cfgName ->
-                val cfg = project.configurations.findByName(cfgName)
-                if (cfg != null) {
-                    // Add as a normal dependency to the configuration
-                    project.dependencies.add(cfgName, bomNotation)
-                }
-            }
         }
 
-        // Wire BOM after Java or Kotlin plugin creates standard configurations
-        project.pluginManager.withPlugin("java") { addBom() }
-        project.pluginManager.withPlugin("org.jetbrains.kotlin.jvm") { addBom() }
-
-        // As a fallback, try adding late in configuration if neither plugin triggers
-        project.afterEvaluate { addBom() }
+        if (bomNotation != null) {
+            val targetConfigs = zero.addToConfigurations.get()
+            project.configurations.matching { it.name in targetConfigs }.all {
+                project.dependencies.add(this.name, bomNotation)
+            }
+        }
 
         // Configure publishing (order-safe)
         project.pluginManager.withPlugin("maven-publish") {
@@ -245,40 +229,6 @@ class LibraryPlugin : Plugin<Project> {
                 // Resolve configuration from extension, properties, or environment
                 fun env(name: String): String? = project.providers.environmentVariable(name).orNull
                 fun prop(name: String): String? = project.providers.gradleProperty(name).orNull ?: project.findProperty(name)?.toString()
-                fun parseOwnerRepoFromGitConfig(): Pair<String, String>? {
-                    val gitConfig = project.rootProject.file(".git/config")
-                    if (!gitConfig.isFile) return null
-                    val lines = gitConfig.readLines()
-                    var inOrigin = false
-                    var url: String? = null
-                    for (raw in lines) {
-                        val line = raw.trim()
-                        if (line.startsWith("[") && line.endsWith("]")) {
-                            inOrigin = line.equals("[remote \"origin\"]", ignoreCase = true)
-                            continue
-                        }
-                        if (inOrigin && (line.startsWith("url =") || line.startsWith("url = ") || line.startsWith("url="))) {
-                            url = line.substringAfter("=").trim()
-                            break
-                        }
-                    }
-                    if (url.isNullOrBlank()) return null
-                    val candidates = listOf(
-                        Regex("""(?i)git@([^:]+):([^/]+)/([^/]+?)(?:\\.git)?$"""),
-                        Regex("""(?i)(?:https?|ssh|git)://([^/]+)/([^/]+)/([^/]+?)(?:\\.git)?$""")
-                    )
-                    for (regex in candidates) {
-                        val m = regex.find(url!!)
-                        if (m != null) {
-                            val host = m.groupValues[1]
-                            val owner = m.groupValues[2]
-                            val repo = m.groupValues[3]
-                            // Only trust owner/repo if host looks like GitHub; otherwise caller can override via zero.githubUrl
-                            if (host.contains("github", ignoreCase = true)) return owner to repo
-                        }
-                    }
-                    return null
-                }
 
                 val urlFromExt = zero.githubUrl.orNull
                 var owner = zero.githubOwner.orNull
@@ -289,7 +239,7 @@ class LibraryPlugin : Plugin<Project> {
                     ?: env("GITHUB_REPOSITORY")?.substringAfter('/')
                     ?: prop("gpr.repo")
                 if (owner.isNullOrBlank() || repo.isNullOrBlank()) {
-                    parseOwnerRepoFromGitConfig()?.let { (o, r) ->
+                    GitUtils.parseOwnerRepoFromGitConfig(project)?.let { (o, r) ->
                         if (owner.isNullOrBlank()) owner = o
                         if (repo.isNullOrBlank()) repo = r
                         project.logger.info("[library] Derived GitHub owner/repo from .git/config: $owner/$repo")

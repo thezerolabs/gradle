@@ -1,5 +1,6 @@
 package net.thezerolabs.gradle.library
 
+import net.thezerolabs.gradle.library.internal.GitUtils
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.provider.Property
@@ -147,38 +148,9 @@ class ServicePlugin : Plugin<Project> {
         var repo = zero.githubRepo.orNull ?: env("GITHUB_REPOSITORY")?.substringAfter('/') ?: prop("gpr.repo")
 
         if (owner.isNullOrBlank() || repo.isNullOrBlank()) {
-            val gitConfig = project.rootProject.file(".git/config")
-            if (gitConfig.isFile) {
-                val lines = gitConfig.readLines()
-                var inOrigin = false
-                var url: String? = null
-                for (raw in lines) {
-                    val line = raw.trim()
-                    if (line.startsWith("[") && line.endsWith("]")) {
-                        inOrigin = line.equals("[remote \"origin\"]", ignoreCase = true)
-                        continue
-                    }
-                    if (inOrigin && line.startsWith("url")) {
-                        url = line.substringAfter('=').trim()
-                        break
-                    }
-                }
-                if (!url.isNullOrBlank()) {
-                    val regexes = listOf(
-                        Regex("""(?i)git@([^:]+):([^/]+)/([^/]+?)(?:\\.git)?$"""),
-                        Regex("""(?i)(?:https?|ssh|git)://([^/]+)/([^/]+)/([^/]+?)(?:\\.git)?$""")
-                    )
-                    for (regex in regexes) {
-                        val match = regex.find(url)
-                        if (match != null && match.groupValues.size >= 4) {
-                            val host = match.groupValues[1]
-                            if (!host.contains("github", ignoreCase = true)) break
-                            owner = owner ?: match.groupValues[2]
-                            repo = repo ?: match.groupValues[3]
-                            break
-                        }
-                    }
-                }
+            GitUtils.parseOwnerRepoFromGitConfig(project)?.let { (o, r) ->
+                if (owner.isNullOrBlank()) owner = o
+                if (repo.isNullOrBlank()) repo = r
             }
         }
 
