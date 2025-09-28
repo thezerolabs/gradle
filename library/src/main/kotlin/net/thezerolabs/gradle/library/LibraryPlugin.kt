@@ -7,6 +7,7 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.publish.PublishingExtension
+import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.credentials
 import org.gradle.jvm.toolchain.JavaLanguageVersion
@@ -80,6 +81,13 @@ class LibraryPlugin : Plugin<Project> {
             val current: JavaLanguageVersion? = javaExt.toolchain.languageVersion.orNull
             if (current == null || current.asInt() < 24) {
                 javaExt.toolchain.languageVersion.set(JavaLanguageVersion.of(24))
+            }
+            // Also publish sources and javadoc jars by default
+            runCatching {
+                javaExt.withSourcesJar()
+                javaExt.withJavadocJar()
+            }.onFailure {
+                project.logger.info("[library] Unable to enable sources/javadoc jars: ${it.message}")
             }
         }
 
@@ -194,8 +202,22 @@ class LibraryPlugin : Plugin<Project> {
         // As a fallback, try adding late in configuration if neither plugin triggers
         project.afterEvaluate { addBom() }
 
-        // Configure publishing to GitHub Packages (order-safe)
+        // Configure publishing (order-safe)
         project.pluginManager.withPlugin("maven-publish") {
+            // Ensure a default Maven publication exists for Java projects
+            project.extensions.configure<PublishingExtension> {
+                publications {
+                    if (findByName("mavenJava") == null) {
+                        val javaComponent = project.components.findByName("java")
+                        if (javaComponent != null) {
+                            create("mavenJava", MavenPublication::class.java).from(javaComponent)
+                        } else {
+                            project.logger.info("[library] No 'java' component found; skipping default maven publication creation.")
+                        }
+                    }
+                }
+            }
+
             if (zero.enableGithubPublishing.get()) {
                 // Resolve configuration from extension, properties, or environment
                 fun env(name: String): String? = project.providers.environmentVariable(name).orNull
