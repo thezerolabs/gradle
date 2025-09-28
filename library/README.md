@@ -1,12 +1,13 @@
-# TheZeroLabs Library Gradle Plugin
+# TheZeroLabs Gradle Plugins
 
-The `library` module provides a Gradle plugin (`net.thezerolabs.gradle.library`) that standardizes JVM project setup and optionally wires in TheZeroLabs BOM and GitHub Packages publishing.
+The `library` module provides multiple Gradle plugins that standardize JVM and service projects while wiring in TheZeroLabs opinionated defaults.
 
 ## Plugin ID
 
 - `net.thezerolabs.gradle.library`
+- `net.thezerolabs.gradle.service`
 
-## What the plugin does
+## What the library plugin does
 
 - Sets Java toolchain to Java 24 when not explicitly configured.
 - Adds Maven Central, Spring Releases, and TheZeroLabs GitHub Packages repositories for dependency resolution by default.
@@ -65,7 +66,7 @@ pluginManagement {
 
 ## Configuration (extension)
 
-The plugin exposes an extension named `zero`:
+Both plugins expose an extension named `zero`:
 
 Kotlin DSL:
 ```kotlin
@@ -90,6 +91,26 @@ zero {
     // Credentials (used for dependency resolution and publishing; if not set, falls back to env GITHUB_ACTOR / GITHUB_TOKEN)
     username.set("${System.getenv("GPR_USER")}")
     token.set("${System.getenv("GPR_TOKEN")}")
+
+    // Spring Boot service settings (service plugin)
+    bootMainClass.set("com.example.Application")
+
+    container {
+        // Optional explicit image. Defaults to ghcr.io/<githubOwner>/<githubRepo>
+        image.set("123456789012.dkr.ecr.us-east-1.amazonaws.com/my-service")
+        // Tags to publish. Defaults to project version when present.
+        tags.set(listOf("latest", "${project.version}"))
+
+        // GitHub Container Registry publishing (enabled by default)
+        enableGithubPublishing.set(true)
+
+        // Amazon ECR support (disabled by default)
+        enableEcrPublishing.set(true)
+        ecrRegistry.set("123456789012.dkr.ecr.us-east-1.amazonaws.com")
+        ecrRepository.set("my-service")
+        ecrUsername.set("AWS")
+        ecrPassword.set(System.getenv("AWS_ECR_PASSWORD"))
+    }
 }
 ```
 
@@ -110,8 +131,30 @@ zero {
     // Credentials (used for dependency resolution and publishing)
     username = System.getenv('GPR_USER')
     token = System.getenv('GPR_TOKEN')
+
+    // Spring Boot service settings (service plugin)
+    bootMainClass = 'com.example.Application'
+
+    container {
+        image = '123456789012.dkr.ecr.us-east-1.amazonaws.com/my-service'
+        tags = ['latest', project.version]
+        enableGithubPublishing = true
+        enableEcrPublishing = true
+        ecrRegistry = '123456789012.dkr.ecr.us-east-1.amazonaws.com'
+        ecrRepository = 'my-service'
+        ecrUsername = 'AWS'
+        ecrPassword = System.getenv('AWS_ECR_PASSWORD')
+    }
 }
 ```
+
+## What the service plugin adds
+
+- Applies the library plugin automatically.
+- Adds the Spring Boot Gradle plugin and lets you set the `bootMainClass` via `zero.bootMainClass`.
+- Applies the Jib plugin to build container images.
+- Derives a GitHub Container Registry image (`ghcr.io/<owner>/<repo>`) and configures credentials from GitHub environment variables.
+- Allows publishing to Amazon ECR by configuring `zero.container` (registry, repository, credentials, or environment variables).
 
 ## Using the BOM via the plugin
 
