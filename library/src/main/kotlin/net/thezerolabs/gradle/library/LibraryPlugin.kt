@@ -82,6 +82,8 @@ open class ZeroExtension @Inject constructor(objects: ObjectFactory) {
     val bootMainClass: Property<String> = objects.property(String::class.java)
     /** Container/image configuration (used by the service plugin). */
     val container: ContainerExtension = objects.newInstance(ContainerExtension::class.java)
+    /** Whether to automatically configure Lombok annotation processing. */
+    val enableLombok: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
 }
 
 class LibraryPlugin : Plugin<Project> {
@@ -207,6 +209,15 @@ class LibraryPlugin : Plugin<Project> {
             project.configurations.matching { it.name in targetConfigs }.all {
                 project.dependencies.add(this.name, bomNotation)
             }
+        }
+
+        // Add Lombok if enabled (and BOM is present)
+        if (zero.enableLombok.get() && bomNotation != null) {
+            val lombok = "org.projectlombok:lombok"
+            project.dependencies.add("compileOnly", lombok)
+            project.dependencies.add("annotationProcessor", lombok)
+            project.dependencies.add("testCompileOnly", lombok)
+            project.dependencies.add("testAnnotationProcessor", lombok)
         }
 
         // Configure publishing (order-safe)
