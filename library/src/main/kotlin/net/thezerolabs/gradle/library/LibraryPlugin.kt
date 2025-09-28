@@ -13,6 +13,7 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.credentials.PasswordCredentials
 import org.gradle.kotlin.dsl.maven
+import org.gradle.kotlin.dsl.mavenCentral
 import javax.inject.Inject
 
 open class ZeroExtension @Inject constructor(objects: ObjectFactory) {
@@ -73,12 +74,34 @@ class LibraryPlugin : Plugin<Project> {
             }
         }
  
-        // Add TheZeroLabs Maven repository as a default repository for dependency resolution
+        // Add default repositories for dependency resolution (Maven Central, Spring, and TheZeroLabs)
         run {
             fun env(name: String): String? = project.providers.environmentVariable(name).orNull
             fun prop(name: String): String? = project.providers.gradleProperty(name).orNull ?: project.findProperty(name)?.toString()
 
+            // 1) Maven Central
+            val mavenCentralUrl = "https://repo.maven.apache.org/maven2"
+            val hasMavenCentral = project.repositories.any {
+                it is MavenArtifactRepository && it.url.toString().trimEnd('/') == mavenCentralUrl
+            }
+            if (!hasMavenCentral) {
+                project.repositories.mavenCentral()
+            }
+
+            // 2) Spring Releases
+            val springReleaseUrl = "https://repo.spring.io/release"
+            val hasSpringRelease = project.repositories.any {
+                it is MavenArtifactRepository && it.url.toString().trimEnd('/') == springReleaseUrl
+            }
+            if (!hasSpringRelease) {
+                project.repositories.maven {
+                    name = "SpringReleases"
+                    url = project.uri(springReleaseUrl)
+                }
+            }
+
             val repoUrl = zero.githubUrl.orNull ?: "https://maven.pkg.github.com/thezerolabs/gradle"
+            val normalizedRepoUrl = repoUrl.trimEnd('/')
             val user = zero.username.orNull
                 ?: prop("gpr.user")
                 ?: env("GPR_USER")
@@ -90,7 +113,7 @@ class LibraryPlugin : Plugin<Project> {
 
             val alreadyAdded = project.repositories.any {
                 it is org.gradle.api.artifacts.repositories.MavenArtifactRepository &&
-                    it.url.toString() == repoUrl
+                    it.url.toString().trimEnd('/') == normalizedRepoUrl
             }
             if (!alreadyAdded) {
                 project.repositories.maven {

@@ -9,7 +9,7 @@ The `library` module provides a Gradle plugin (`net.thezerolabs.gradle.library`)
 ## What the plugin does
 
 - Sets Java toolchain to Java 24 when not explicitly configured.
-- Adds TheZeroLabs GitHub Packages Maven repository for dependency resolution by default.
+- Adds Maven Central, Spring Releases, and TheZeroLabs GitHub Packages repositories for dependency resolution by default.
 - Optionally adds TheZeroLabs BOM (`:bom` project if present, or published BOM by GAV) to common configurations.
 - Optionally configures a Maven repository pointing to GitHub Packages for publishing (no init scripts required).
 
