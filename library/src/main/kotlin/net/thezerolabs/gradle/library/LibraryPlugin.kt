@@ -10,6 +10,8 @@ import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.credentials
+import org.gradle.kotlin.dsl.maven
+import org.gradle.kotlin.dsl.mavenCentral
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.repositories.PasswordCredentials
@@ -281,20 +283,25 @@ class LibraryPlugin : Plugin<Project> {
                     ?: prop("gpr.token")
                     ?: env("GITHUB_TOKEN")
 
-                if (!url.isNullOrBlank() && !user.isNullOrBlank() && !token.isNullOrBlank()) {
+                if (!url.isNullOrBlank()) {
                     project.extensions.configure<PublishingExtension> {
                         repositories {
                             maven {
+                                name = "GitHubPackages"
                                 this.url = project.uri(url)
-                                credentials(PasswordCredentials::class) {
-                                    username = user
-                                    password = token
+                                if (!user.isNullOrBlank() && !token.isNullOrBlank()) {
+                                    credentials(PasswordCredentials::class) {
+                                        username = user
+                                        password = token
+                                    }
+                                } else {
+                                    project.logger.info("[library] Configured GitHub Packages repository without credentials (url=$url). Set gpr.user/gpr.token or GITHUB_ACTOR/GITHUB_TOKEN to publish.")
                                 }
                             }
                         }
                     }
                 } else {
-                    project.logger.info("[library] Skipping GitHub Packages publishing repository: missing url/user/token. url=$url user=${user?.let { "***" }} token=${token?.let { "***" }}")
+                    project.logger.info("[library] Skipping GitHub Packages repository: missing owner/repo. Set zero.githubUrl or zero.githubOwner/zero.githubRepo.")
                 }
             }
         }
