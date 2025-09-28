@@ -13,6 +13,8 @@ repositories {
 
 dependencies {
     compileOnly("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
+    compileOnly("org.springframework.boot:spring-boot-gradle-plugin:3.3.0")
+    compileOnly("com.google.cloud.tools:jib-gradle-plugin:3.4.2")
 }
 
 gradlePlugin {
