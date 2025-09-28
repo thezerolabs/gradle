@@ -1,10 +1,11 @@
 package net.thezerolabs.gradle.library
 
+import com.google.cloud.tools.jib.gradle.JibExtension
 import net.thezerolabs.gradle.library.internal.GitUtils
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.provider.Property
 import org.gradle.kotlin.dsl.getByType
+import org.springframework.boot.gradle.dsl.SpringBootExtension
 import java.util.LinkedHashSet
 
 class ServicePlugin : Plugin<Project> {
@@ -21,32 +22,20 @@ class ServicePlugin : Plugin<Project> {
 
     private fun configureSpringBoot(project: Project, zero: ZeroExtension) {
         project.pluginManager.withPlugin("org.springframework.boot") {
-            val springBootExt = project.extensions.findByName("springBoot") ?: return@withPlugin
-            val mainClassProperty = findMainClassProperty(springBootExt)
-
-            mainClassProperty?.convention(zero.bootMainClass)
+            val springBootExt = project.extensions.getByType<SpringBootExtension>()
+            springBootExt.mainClass.convention(zero.bootMainClass)
             project.afterEvaluate {
                 val mainClass = zero.bootMainClass.orNull
                 if (!mainClass.isNullOrBlank()) {
-                    mainClassProperty?.set(mainClass)
+                    springBootExt.mainClass.set(mainClass)
                 }
             }
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private fun findMainClassProperty(extension: Any): Property<String>? {
-        val getter = extension.javaClass.methods.firstOrNull { method ->
-            method.name == "getMainClass" && method.parameterCount == 0
-        } ?: return null
-
-        val result = runCatching { getter.invoke(extension) }.getOrNull()
-        return result as? Property<String>
-    }
-
     private fun configureJib(project: Project, zero: ZeroExtension) {
         project.pluginManager.withPlugin("com.google.cloud.tools.jib") {
-            val jib = project.extensions.findByName("jib") ?: return@withPlugin
+            val jib = project.extensions.getByType<JibExtension>()
             val container = zero.container
 
             val env = { name: String -> project.providers.environmentVariable(name).orNull }
@@ -58,7 +47,7 @@ class ServicePlugin : Plugin<Project> {
                 !container.ecrRegistry.orNull.isNullOrBlank() ||
                 !container.ecrRepository.orNull.isNullOrBlank()
 
-            val image = container.image.orNull?.takeIf { it.isNotBlank() } ?: if (useEcr) {
+            val imageNameValue = container.image.orNull?.takeIf { it.isNotBlank() } ?: if (useEcr) {
                 val registry = container.ecrRegistry.orNull ?: env("AWS_ECR_REGISTRY")
                 val repository = container.ecrRepository.orNull ?: env("AWS_ECR_REPOSITORY") ?: project.name
                 if (!registry.isNullOrBlank()) {
@@ -70,73 +59,52 @@ class ServicePlugin : Plugin<Project> {
                 } else null
             } else null
 
-            if (!image.isNullOrBlank()) {
-                setStringProperty(jib, "setImage", image, "to")
-            }
-
-            val defaultTags = if (container.tags.isPresent && container.tags.orNull?.isNotEmpty() == true) {
+            val imageTagsValue = if (container.tags.isPresent && container.tags.orNull?.isNotEmpty() == true) {
                 container.tags.get()
             } else {
                 val version = project.version.toString()
                 if (version.equals("unspecified", ignoreCase = true)) emptyList() else listOf(version)
             }
-            if (defaultTags.isNotEmpty()) {
-                val tags = LinkedHashSet(defaultTags.filter { it.isNotBlank() }.map { it.trim() })
-                setCollectionProperty(jib, "setTags", tags, "to")
-            }
 
-            if (useEcr) {
-                val username = container.ecrUsername.orNull
-                    ?: env("AWS_ECR_USERNAME")
-                    ?: "AWS"
-                val password = container.ecrPassword.orNull
-                    ?: env("AWS_ECR_PASSWORD")
-                    ?: env("AWS_ECR_TOKEN")
-
-                if (!username.isNullOrBlank() && !password.isNullOrBlank()) {
-                    setAuth(jib, username, password, "to")
+            jib.to {
+                if (!imageNameValue.isNullOrBlank()) {
+                    image = imageNameValue
                 }
-            } else if (container.enableGithubPublishing.orNull != false) {
-                val user = zero.username.orNull ?: prop("gpr.user") ?: env("GPR_USER") ?: env("GITHUB_ACTOR")
-                val token = zero.token.orNull ?: prop("gpr.token") ?: env("GPR_TOKEN") ?: env("GITHUB_TOKEN")
-                if (!user.isNullOrBlank() && !token.isNullOrBlank()) {
-                    setAuth(jib, user, token, "to")
+                if (imageTagsValue.isNotEmpty()) {
+                    tags = LinkedHashSet(imageTagsValue.filter { it.isNotBlank() }.map { it.trim() })
                 }
-            }
 
-            val extraCredHelper = env("JIB_CRED_HELPER") ?: prop("jib.credHelper")
-            if (!extraCredHelper.isNullOrBlank()) {
-                setStringProperty(jib, "setCredHelper", extraCredHelper, "to")
+                auth {
+                    if (useEcr) {
+                        val authUsername = container.ecrUsername.orNull
+                            ?: env("AWS_ECR_USERNAME")
+                            ?: "AWS"
+                        val authPassword = container.ecrPassword.orNull
+                            ?: env("AWS_ECR_PASSWORD")
+                            ?: env("AWS_ECR_TOKEN")
+
+                        if (!authUsername.isNullOrBlank() && !authPassword.isNullOrBlank()) {
+                            username = authUsername
+                            password = authPassword
+                        }
+                    } else if (container.enableGithubPublishing.orNull != false) {
+                        val authUser = zero.username.orNull ?: prop("gpr.user") ?: env("GPR_USER") ?: env("GITHUB_ACTOR")
+                        val authToken = zero.token.orNull ?: prop("gpr.token") ?: env("GPR_TOKEN") ?: env("GITHUB_TOKEN")
+                        if (!authUser.isNullOrBlank() && !authToken.isNullOrBlank()) {
+                            username = authUser
+                            password = authToken
+                        }
+                    }
+                }
+
+                val extraCredHelperValue = env("JIB_CRED_HELPER") ?: prop("jib.credHelper")
+                if (!extraCredHelperValue.isNullOrBlank()) {
+                    credHelper {
+                        helper = extraCredHelperValue
+                    }
+                }
             }
         }
-    }
-
-    private fun setStringProperty(target: Any, setterName: String, value: String, nested: String? = null) {
-        val receiver = nested?.let { getNested(target, it) } ?: target
-        val method = receiver?.javaClass?.methods?.firstOrNull { it.name == setterName && it.parameterCount == 1 && it.parameterTypes[0] == String::class.java }
-        method?.invoke(receiver, value)
-    }
-
-    private fun setCollectionProperty(target: Any, setterName: String, value: Set<String>, nested: String? = null) {
-        val receiver = nested?.let { getNested(target, it) } ?: target
-        val method = receiver?.javaClass?.methods?.firstOrNull { it.name == setterName && it.parameterCount == 1 }
-        method?.invoke(receiver, value)
-    }
-
-    private fun setAuth(target: Any, username: String, password: String, nested: String? = null) {
-        val receiver = nested?.let { getNested(target, it) } ?: target
-        val auth = receiver?.javaClass?.methods?.firstOrNull { it.name == "getAuth" && it.parameterCount == 0 }?.invoke(receiver)
-        if (auth != null) {
-            val userSetter = auth.javaClass.methods.firstOrNull { it.name == "setUsername" && it.parameterCount == 1 }
-            val passSetter = auth.javaClass.methods.firstOrNull { it.name == "setPassword" && it.parameterCount == 1 }
-            userSetter?.invoke(auth, username)
-            passSetter?.invoke(auth, password)
-        }
-    }
-
-    private fun getNested(target: Any, nested: String): Any? {
-        val getter = target.javaClass.methods.firstOrNull { it.name.equals("get${nested.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }}", ignoreCase = true) && it.parameterCount == 0 }
-        return getter?.invoke(target)
     }
 
     private fun resolveGithubOwnerRepo(project: Project, zero: ZeroExtension): Pair<String?, String?> {
