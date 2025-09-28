@@ -73,33 +73,35 @@ class LibraryPlugin : Plugin<Project> {
                 project.logger.info("[library] Unable to set Kotlin JVM toolchain to 24: ${it.message}")
             }
         }
- 
+
         // Add default repositories for dependency resolution (Maven Central, Spring, and TheZeroLabs)
-        run {
-            fun env(name: String): String? = project.providers.environmentVariable(name).orNull
-            fun prop(name: String): String? = project.providers.gradleProperty(name).orNull ?: project.findProperty(name)?.toString()
+        fun ensureDefaultRepositories(target: Project) {
+            fun env(name: String): String? = target.providers.environmentVariable(name).orNull
+            fun prop(name: String): String? = target.providers.gradleProperty(name).orNull
+                ?: target.findProperty(name)?.toString()
 
             // 1) Maven Central
             val mavenCentralUrl = "https://repo.maven.apache.org/maven2"
-            val hasMavenCentral = project.repositories.any {
+            val hasMavenCentral = target.repositories.any {
                 it is MavenArtifactRepository && it.url.toString().trimEnd('/') == mavenCentralUrl
             }
             if (!hasMavenCentral) {
-                project.repositories.mavenCentral()
+                target.repositories.mavenCentral()
             }
 
             // 2) Spring Releases
             val springReleaseUrl = "https://repo.spring.io/release"
-            val hasSpringRelease = project.repositories.any {
+            val hasSpringRelease = target.repositories.any {
                 it is MavenArtifactRepository && it.url.toString().trimEnd('/') == springReleaseUrl
             }
             if (!hasSpringRelease) {
-                project.repositories.maven {
+                target.repositories.maven {
                     name = "SpringReleases"
-                    url = project.uri(springReleaseUrl)
+                    url = target.uri(springReleaseUrl)
                 }
             }
 
+            // 3) TheZeroLabs GitHub Packages
             val repoUrl = zero.githubUrl.orNull ?: "https://maven.pkg.github.com/thezerolabs/gradle"
             val normalizedRepoUrl = repoUrl.trimEnd('/')
             val user = zero.username.orNull
@@ -111,25 +113,27 @@ class LibraryPlugin : Plugin<Project> {
                 ?: env("GPR_TOKEN")
                 ?: env("GITHUB_TOKEN")
 
-            val alreadyAdded = project.repositories.any {
-                it is org.gradle.api.artifacts.repositories.MavenArtifactRepository &&
-                    it.url.toString().trimEnd('/') == normalizedRepoUrl
+            val alreadyAdded = target.repositories.any {
+                it is MavenArtifactRepository && it.url.toString().trimEnd('/') == normalizedRepoUrl
             }
             if (!alreadyAdded) {
-                project.repositories.maven {
+                target.repositories.maven {
                     name = "TheZeroLabs"
-                    url = project.uri(repoUrl)
+                    url = target.uri(repoUrl)
                     if (!user.isNullOrBlank() && !token.isNullOrBlank()) {
                         credentials(PasswordCredentials::class) {
                             username = user
                             password = token
                         }
                     } else {
-                        project.logger.info("[library] Adding TheZeroLabs Maven repository without credentials (url=$repoUrl)")
+                        target.logger.info("[library] Adding TheZeroLabs Maven repository without credentials (url=$repoUrl)")
                     }
                 }
             }
         }
+
+        // Apply to all projects in the build for consistency
+        project.rootProject.allprojects { ensureDefaultRepositories(this) }
 
         // Add BOM as a default dependency when common JVM configurations are present
         fun addBom() {
