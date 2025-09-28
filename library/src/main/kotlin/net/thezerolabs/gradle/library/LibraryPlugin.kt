@@ -7,6 +7,7 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.publish.PublishingExtension
+import net.thezerolabs.gradle.library.internal.GitUtils
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.credentials
@@ -222,40 +223,6 @@ class LibraryPlugin : Plugin<Project> {
                 // Resolve configuration from extension, properties, or environment
                 fun env(name: String): String? = project.providers.environmentVariable(name).orNull
                 fun prop(name: String): String? = project.providers.gradleProperty(name).orNull ?: project.findProperty(name)?.toString()
-                fun parseOwnerRepoFromGitConfig(): Pair<String, String>? {
-                    val gitConfig = project.rootProject.file(".git/config")
-                    if (!gitConfig.isFile) return null
-                    val lines = gitConfig.readLines()
-                    var inOrigin = false
-                    var url: String? = null
-                    for (raw in lines) {
-                        val line = raw.trim()
-                        if (line.startsWith("[") && line.endsWith("]")) {
-                            inOrigin = line.equals("[remote \"origin\"]", ignoreCase = true)
-                            continue
-                        }
-                        if (inOrigin && (line.startsWith("url =") || line.startsWith("url = ") || line.startsWith("url="))) {
-                            url = line.substringAfter("=").trim()
-                            break
-                        }
-                    }
-                    if (url.isNullOrBlank()) return null
-                    val candidates = listOf(
-                        Regex("""(?i)git@([^:]+):([^/]+)/([^/]+?)(?:\\.git)?$"""),
-                        Regex("""(?i)(?:https?|ssh|git)://([^/]+)/([^/]+)/([^/]+?)(?:\\.git)?$""")
-                    )
-                    for (regex in candidates) {
-                        val m = regex.find(url!!)
-                        if (m != null) {
-                            val host = m.groupValues[1]
-                            val owner = m.groupValues[2]
-                            val repo = m.groupValues[3]
-                            // Only trust owner/repo if host looks like GitHub; otherwise caller can override via zero.githubUrl
-                            if (host.contains("github", ignoreCase = true)) return owner to repo
-                        }
-                    }
-                    return null
-                }
 
                 val urlFromExt = zero.githubUrl.orNull
                 var owner = zero.githubOwner.orNull
@@ -266,7 +233,7 @@ class LibraryPlugin : Plugin<Project> {
                     ?: env("GITHUB_REPOSITORY")?.substringAfter('/')
                     ?: prop("gpr.repo")
                 if (owner.isNullOrBlank() || repo.isNullOrBlank()) {
-                    parseOwnerRepoFromGitConfig()?.let { (o, r) ->
+                    GitUtils.parseOwnerRepoFromGitConfig(project)?.let { (o, r) ->
                         if (owner.isNullOrBlank()) owner = o
                         if (repo.isNullOrBlank()) repo = r
                         project.logger.info("[library] Derived GitHub owner/repo from .git/config: $owner/$repo")
