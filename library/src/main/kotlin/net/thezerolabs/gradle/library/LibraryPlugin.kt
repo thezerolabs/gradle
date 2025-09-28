@@ -16,6 +16,25 @@ import org.gradle.kotlin.dsl.maven
 import org.gradle.kotlin.dsl.mavenCentral
 import javax.inject.Inject
 
+open class ContainerExtension @Inject constructor(objects: ObjectFactory) {
+    /** Fully qualified image name to publish. If blank, derived from GitHub or ECR settings. */
+    val image: Property<String> = objects.property(String::class.java)
+    /** Additional tags to publish. Defaults to the project version when available. */
+    val tags: ListProperty<String> = objects.listProperty(String::class.java)
+    /** Whether to automatically configure publishing to GitHub Container Registry (ghcr.io). */
+    val enableGithubPublishing: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+    /** Whether to configure publishing to Amazon ECR. */
+    val enableEcrPublishing: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+    /** Optional explicit ECR registry endpoint (e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com). */
+    val ecrRegistry: Property<String> = objects.property(String::class.java)
+    /** Optional ECR repository name. */
+    val ecrRepository: Property<String> = objects.property(String::class.java)
+    /** Optional username for ECR authentication (defaults to AWS when not provided). */
+    val ecrUsername: Property<String> = objects.property(String::class.java)
+    /** Optional password/token for ECR authentication. */
+    val ecrPassword: Property<String> = objects.property(String::class.java)
+}
+
 open class ZeroExtension @Inject constructor(objects: ObjectFactory) {
     /** Group of the published BOM to use when the :bom project is not present. */
     val bomGroup: Property<String> = objects.property(String::class.java).convention("net.thezerolabs.gradle")
@@ -40,6 +59,10 @@ open class ZeroExtension @Inject constructor(objects: ObjectFactory) {
     val token: Property<String> = objects.property(String::class.java)
     /** Whether to auto-configure GitHub Packages publishing repository. */
     val enableGithubPublishing: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
+    /** Optional Spring Boot main class (used by the service plugin). */
+    val bootMainClass: Property<String> = objects.property(String::class.java)
+    /** Container/image configuration (used by the service plugin). */
+    val container: ContainerExtension = objects.newInstance(ContainerExtension::class.java)
 }
 
 class LibraryPlugin : Plugin<Project> {

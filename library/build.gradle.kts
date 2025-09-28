@@ -19,6 +19,12 @@ gradlePlugin {
             description = "Enforces Java 24+ toolchain and adds TheZeroLabs BOM as a default platform dependency."
             implementationClass = "net.thezerolabs.gradle.library.LibraryPlugin"
         }
+        create("service") {
+            id = "net.thezerolabs.gradle.service"
+            displayName = "TheZeroLabs Service Convention Plugin"
+            description = "Extends the library plugin with Spring Boot and container image publishing defaults."
+            implementationClass = "net.thezerolabs.gradle.library.ServicePlugin"
+        }
     }
 }
 
