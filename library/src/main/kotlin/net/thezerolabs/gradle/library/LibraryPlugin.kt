@@ -13,8 +13,6 @@ import org.gradle.kotlin.dsl.credentials
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.artifacts.repositories.PasswordCredentials
-import org.gradle.kotlin.dsl.maven
-import org.gradle.kotlin.dsl.mavenCentral
 import javax.inject.Inject
 
 open class ContainerExtension @Inject constructor(objects: ObjectFactory) {
