@@ -32,6 +32,9 @@ dependencies {
 
     // Language
     api(platform(libs.boms.kotlin))
+
+    // Annotation Processors
+    api(libs.lombok)
 }
 
 publishing {
