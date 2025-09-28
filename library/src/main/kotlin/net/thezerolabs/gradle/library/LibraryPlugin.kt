@@ -11,7 +11,7 @@ import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.credentials
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
-import org.gradle.api.credentials.PasswordCredentials
+import org.gradle.api.artifacts.repositories.PasswordCredentials
 import org.gradle.kotlin.dsl.maven
 import org.gradle.kotlin.dsl.mavenCentral
 import javax.inject.Inject
@@ -243,7 +243,7 @@ class LibraryPlugin : Plugin<Project> {
                         repositories {
                             maven {
                                 this.url = project.uri(url)
-                                credentials {
+                                credentials(PasswordCredentials::class) {
                                     username = user
                                     password = token
                                 }
