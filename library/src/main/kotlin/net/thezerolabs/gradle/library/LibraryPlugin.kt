@@ -47,7 +47,22 @@ open class ZeroExtension @Inject constructor(objects: ObjectFactory) {
     val enforcedPlatform: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
     /** Configurations to which the BOM platform should be added by default. */
     val addToConfigurations: ListProperty<String> = objects.listProperty(String::class.java)
-        .convention(listOf("implementation", "testImplementation"))
+        .convention(
+            listOf(
+                "api",
+                "implementation",
+                "testImplementation",
+                // Java annotation processing
+                "annotationProcessor",
+                "testAnnotationProcessor",
+                // Kotlin annotation processing (KAPT)
+                "kapt",
+                "kaptTest",
+                // Kotlin Symbol Processing (KSP)
+                "ksp",
+                "kspTest"
+            )
+        )
     /** GitHub owner (user or org). If not set, will try to read from GITHUB_REPOSITORY env (owner/repo). */
     val githubOwner: Property<String> = objects.property(String::class.java)
     /** GitHub repository name. If not set, will try to read from GITHUB_REPOSITORY env (owner/repo). */
@@ -72,7 +87,8 @@ class LibraryPlugin : Plugin<Project> {
         val zero = project.extensions.create("zero", ZeroExtension::class.java)
 
         // Automatically apply required plugins to consuming projects
-        project.pluginManager.apply("java")
+        // Use 'java-library' so that the 'api' configuration is available to consumers
+        project.pluginManager.apply("java-library")
         project.pluginManager.apply("maven-publish")
 
         // Enforce Java 24+ via toolchains when Java plugin is present
@@ -102,6 +118,13 @@ class LibraryPlugin : Plugin<Project> {
                 }
             }.onFailure {
                 project.logger.info("[library] Unable to set Kotlin JVM toolchain to 24: ${it.message}")
+            }
+
+            // Also enable KAPT if available so 'kapt' configurations exist for annotation processing
+            runCatching {
+                project.pluginManager.apply("org.jetbrains.kotlin.kapt")
+            }.onFailure {
+                project.logger.info("[library] Unable to apply kotlin-kapt plugin automatically: ${it.message}")
             }
         }
 
