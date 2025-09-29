@@ -10,6 +10,10 @@ This repository hosts two Gradle modules:
 - To use the BOM in your project, see [`bom/README.md`](bom/README.md).
 - To apply and configure the library plugin, see [`library/README.md`](library/README.md).
 
+## Documentation
+
+For a comprehensive overview of the plugins, configuration options, and project structure, please see our [full documentation](DOCUMENTATION.md).
+
 ## Repositories (GitHub Packages)
 
 To consume artifacts (BOM or plugin) from GitHub Packages, add this repository and credentials:
