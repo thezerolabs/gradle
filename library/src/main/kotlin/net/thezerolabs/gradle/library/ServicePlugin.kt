@@ -104,6 +104,28 @@ class ServicePlugin : Plugin<Project> {
                     }
                 }
             }
+
+            // Ensure a Java 25 base image by default, without overriding explicit user config
+            // Order of precedence for base image:
+            // 1) Gradle property: -Pjib.from.image or gradle.properties "jib.from.image"
+            // 2) Environment variable: JIB_FROM_IMAGE
+            // 3) Default: eclipse-temurin:25-jre
+            project.afterEvaluate {
+                val fromProp = prop("jib.from.image") ?: env("JIB_FROM_IMAGE")
+                val desiredBase = fromProp?.takeIf { it.isNotBlank() } ?: "eclipse-temurin:25-jre"
+
+                // Only set if not already configured by the build script
+                val current = try {
+                    jib.from.image
+                } catch (e: Exception) {
+                    null
+                }
+                if (current.isNullOrBlank()) {
+                    jib.from {
+                        image = desiredBase
+                    }
+                }
+            }
         }
     }
 

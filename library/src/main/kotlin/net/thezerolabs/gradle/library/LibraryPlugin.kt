@@ -4,6 +4,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.JavaVersion
 import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.publish.PublishingExtension
@@ -39,7 +40,7 @@ open class ContainerExtension @Inject constructor(objects: ObjectFactory) {
 
 open class ZeroExtension @Inject constructor(objects: ObjectFactory) {
     /** Java toolchain version to enforce. */
-    val javaToolchainVersion: Property<Int> = objects.property(Int::class.java).convention(24)
+    val javaToolchainVersion: Property<Int> = objects.property(Int::class.java).convention(25)
     /** Group of the published BOM to use when the :bom project is not present. */
     val bomGroup: Property<String> = objects.property(String::class.java).convention("net.thezerolabs.gradle")
     /** Artifact of the published BOM to use when the :bom project is not present. */
@@ -100,6 +101,14 @@ class LibraryPlugin : Plugin<Project> {
         project.pluginManager.withPlugin("java") {
             val javaExt = project.extensions.getByType(JavaPluginExtension::class.java)
             javaExt.toolchain.languageVersion.set(zero.javaToolchainVersion.map(JavaLanguageVersion::of))
+            // Also set source/target compatibility to the same default Java version
+            runCatching {
+                val compat = JavaVersion.toVersion(zero.javaToolchainVersion.get())
+                javaExt.sourceCompatibility = compat
+                javaExt.targetCompatibility = compat
+            }.onFailure {
+                project.logger.info("[library] Unable to set source/target compatibility: ${it.message}")
+            }
             // Also publish sources and javadoc jars by default
             runCatching {
                 javaExt.withSourcesJar()
