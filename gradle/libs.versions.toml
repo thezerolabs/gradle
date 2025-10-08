@@ -15,6 +15,7 @@ micrometer = "1.15.4"
 azure = "1.2.38"
 kotlin = "2.2.20"
 lombok = "1.18.34"
+mapstruct = "1.6.3"
 
 [libraries]
 # Spring ecosystem
@@ -39,3 +40,5 @@ boms-micrometer = { module = "io.micrometer:micrometer-bom", version.ref = "micr
 # Language
 boms-kotlin = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+mapstruct = { module = "org.mapstruct:mapstruct", version.ref = "mapstruct" }
+mapstruct-processor = { module = "org.mapstruct:mapstruct-processor", version.ref = "mapstruct" }

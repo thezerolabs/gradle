@@ -33,7 +33,11 @@ dependencies {
     // Language
     api(platform(libs.boms.kotlin))
 
+    // Mapping
+    api(libs.mapstruct)
+
     // Annotation Processors
+    api(libs.mapstruct.processor)
     api(libs.lombok)
 }
 
