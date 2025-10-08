@@ -55,7 +55,10 @@ open class ZeroExtension @Inject constructor(objects: ObjectFactory) {
             listOf(
                 "api",
                 "implementation",
+                "compileOnly",
+                "compileOnlyApi",
                 "testImplementation",
+                "testCompileOnly",
                 // Java annotation processing
                 "annotationProcessor",
                 "testAnnotationProcessor",
