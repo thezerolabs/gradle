@@ -105,6 +105,24 @@ class ServicePlugin : Plugin<Project> {
                 }
             }
 
+            // Apply container-level settings such as exposed ports after project evaluation,
+            // so user configuration in build.gradle(.kts) is fully realized.
+            project.afterEvaluate {
+                val portsValue = container.ports.orNull
+                    ?.filter { it.isNotBlank() }
+                    ?.map { it.trim() }
+                    ?.distinct()
+                if (!portsValue.isNullOrEmpty()) {
+                    val currentPorts = runCatching { jib.container.ports }.getOrNull()
+                    if (currentPorts.isNullOrEmpty()) {
+                        jib.container {
+                            // Jib expects values like "8080" or "53/udp"
+                            ports = portsValue
+                        }
+                    }
+                }
+            }
+
             // Ensure a Java 25 base image by default, without overriding explicit user config
             // Order of precedence for base image:
             // 1) Gradle property: -Pjib.from.image or gradle.properties "jib.from.image"

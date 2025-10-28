@@ -121,6 +121,7 @@ The `container` block configures Jib for building container images.
 | ------------------------ | -------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `image`                  | `String`       | *(derived)*                 | The full name of the container image to build. If not set, it's derived from ECR or GitHub settings (e.g., `ghcr.io/owner/repo`).                  |
 | `tags`                   | `List<String>` | `[project.version]`         | A list of tags to apply to the published image.                                                                                                  |
+| `ports`                  | `List<String>` | *(none)*                    | Exposed container ports in the image (e.g., "8080", "8443/tcp"). Jib expects entries like `PORT` or `PORT/protocol`. The service plugin only sets these if they are not already configured in `jib.container`. |
 | `enableGithubPublishing` | `Boolean`      | `true`                      | If `true`, configures Jib to publish to GitHub Container Registry (`ghcr.io`).                                                                   |
 
 **ECR Settings**

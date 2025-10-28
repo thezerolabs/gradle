@@ -100,6 +100,8 @@ zero {
         image.set("123456789012.dkr.ecr.us-east-1.amazonaws.com/my-service")
         // Tags to publish. Defaults to project version when present.
         tags.set(listOf("latest", "${project.version}"))
+        // Expose ports in the image (e.g., "8080", "8443/tcp")
+        ports.set(listOf("8080"))
 
         // GitHub Container Registry publishing (enabled by default)
         enableGithubPublishing.set(true)
@@ -138,6 +140,8 @@ zero {
     container {
         image = '123456789012.dkr.ecr.us-east-1.amazonaws.com/my-service'
         tags = ['latest', project.version]
+        // Expose ports in the image (e.g., '8080', '8443/tcp')
+        ports = ['8080']
         enableGithubPublishing = true
         enableEcrPublishing = true
         ecrRegistry = '123456789012.dkr.ecr.us-east-1.amazonaws.com'

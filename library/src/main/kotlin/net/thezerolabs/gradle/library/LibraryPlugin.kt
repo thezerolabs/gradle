@@ -24,6 +24,8 @@ open class ContainerExtension @Inject constructor(objects: ObjectFactory) {
     val image: Property<String> = objects.property(String::class.java)
     /** Additional tags to publish. Defaults to the project version when available. */
     val tags: ListProperty<String> = objects.listProperty(String::class.java)
+    /** Exposed container ports (e.g., "8080", "8443/tcp"). */
+    val ports: ListProperty<String> = objects.listProperty(String::class.java)
     /** Whether to automatically configure publishing to GitHub Container Registry (ghcr.io). */
     val enableGithubPublishing: Property<Boolean> = objects.property(Boolean::class.java).convention(true)
     /** Whether to configure publishing to Amazon ECR. */
